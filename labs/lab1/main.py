@@ -2,10 +2,11 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+import task1
+import task2
+import task3
+
 from shared.student import *
-
-import task1, task2, task3
-
 
 print(f"{STUDENT_NAME}, {GROUP_NAME}, варіант №{VARIANT_NUMBER}")
 

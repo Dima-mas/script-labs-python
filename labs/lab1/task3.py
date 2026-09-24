@@ -46,17 +46,16 @@
     8. Організуйте весь запуск через головну функцію main()."""
     
 # алгоритм хешування: sha1, мінімальна довжина пароля: 8    
+import csv
+import hashlib
+import json
 import os
 import sys
-import csv
-import json
-import hashlib
 from datetime import datetime
 from functools import wraps
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from shared.student import VARIANT_NUMBER
-
 
 data_dir = "labs/lab1/data"
 password_min_length = 8
@@ -114,7 +113,7 @@ def create_users(users_list:list[tuple]):
                 except (ValueError, ValidationError) as e:
                     print(f"User Error '{username}': {e}")
 
-    except (FileNotFoundError, PermissionError, IOError) as e:
+    except (OSError, FileNotFoundError, PermissionError) as e:
         print(f"(handled at create_users) {type(e).__name__}: {e}")
 
 
@@ -130,7 +129,7 @@ def read_user_csv():
                         "username": username,
                         "hash": password_hash
                         })
-    except (FileNotFoundError, PermissionError, IOError) as e:
+    except (OSError, FileNotFoundError, PermissionError) as e:
         print(f"(handled at read_user_csv) {type(e).__name__}: {e}")
 
     return users_db
@@ -156,7 +155,7 @@ def write_login_attempt(event):
                 
         
 
-    except (FileNotFoundError, PermissionError, IOError) as e:
+    except (OSError, FileNotFoundError, PermissionError) as e:
         print(f"(handled at write_login_attempt) {type(e).__name__}: {e}")
 
 
@@ -220,7 +219,7 @@ def login(username: str, password: str) -> bool:
                 return False
         return False
 
-    except (FileNotFoundError, PermissionError, IOError, ValidationError, ValueError) as e:
+    except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
         print(f"(handled at login) {type(e).__name__}: {e}")
         return False
 
@@ -240,14 +239,14 @@ def execute():
         create_users(users_to_register)
         print("Users db created✅")
 
-    except (FileNotFoundError, PermissionError, IOError, ValidationError, ValueError) as e:
+    except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
         print(f"(handled at execute > creating users db) {type(e).__name__}: {e}")
 
 
     print("Reading users db...")
     try:
         print("User db read succesfully✅")
-    except (FileNotFoundError, PermissionError, IOError, ValidationError, ValueError) as e:
+    except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
         print(f"(handled at execute > reading users db) {type(e).__name__}: {e}")
 
 

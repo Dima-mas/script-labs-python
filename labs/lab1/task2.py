@@ -72,9 +72,9 @@ blocked_users = {"temp_worker", "fired_employee", "compromised_acc"}
 
 
 def check_accesses(resources: tuple, users: dict) -> dict[str:dict]:
-    access_dict = {user: {} for user in users.keys()}
-    for user in users.keys():
-        if not user in users.keys():
+    access_dict = {user: {} for user in users}
+    for user in users:
+        if not user in users:
             access_dict[user].update(
                 {res: "DENY (User not found)" for res in resources}
                 )
