@@ -40,15 +40,59 @@ passwords = [
 criteria = {
     "min_length": 9,
     "require_digits": True,
+    "require_lower"
     "require_upper": True,
     "require_special": True,
 }
 forbidden_passwords = {"temp", "guest", "login", "demo", "abc123", "user"}
 
-repeats = (ran(0,len(passwords)-1),
-           ran(0,len(passwords)-1),
-           ran(0,len(passwords)-1))
-passwords.extend(ran(0,len(passwords)-1))
+repeats = (passwords[ran(0,len(passwords)-1)],
+           passwords[ran(0,len(passwords)-1)],
+           passwords[ran(0,len(passwords)-1)])
+passwords.extend(repeats)
 
-for password in passwords:
-    pass #check passwords according to set requirements
+def check_password_validity(passwords:list[str], criteria:dict) -> list[tuple[str,str]]:
+    statuses = []
+    for password in passwords:
+        criteria_passes = {
+            "min_length": len(password) >= criteria["min_length"],
+            "require_digits": any(digit in password for digit in "1234567890"),
+            "require_upper": password.lower() != password,
+            "require_special": any(symbol in password for symbol in " !\"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~"),
+        }
+    
+        is_very_strong = (all(criteria_passes.values()) 
+                and len(password) >= criteria["min_length"] + 4
+                and not passwords.count(password) > 1)
+        is_strong = (all(criteria_passes.values()) 
+                and len(password) >= criteria["min_length"] + 4)
+        is_normal = (criteria_passes["min_length"]
+                        and list(criteria_passes.values()).count(True) >= 2)
+        is_weak = True in criteria_passes.values()
+    
+    
+        if password in forbidden_passwords or not criteria_passes["min_length"]:
+            statuses.append((password, "Заборонений"))
+            continue
+        else:
+            if is_very_strong:
+                statuses.append((password, "Дуже сильний"))
+                continue
+            elif is_strong:
+                statuses.append((password, "Cильний"))
+                continue
+            elif is_normal:
+                statuses.append((password, "Середній"))
+                continue
+            elif is_weak:
+                statuses.append((password, "Слабкий"))
+                continue
+    return statuses
+
+
+def execute():
+    validated_passwords = check_password_validity(passwords, criteria)
+
+    print("--------Завдання 1--------\nСтатуси паролів:")
+    print(*[f"{status[0]}: {status[1]}" for status in validated_passwords], sep=";\n", end="\n\n")
+            

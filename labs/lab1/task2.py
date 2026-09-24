@@ -70,5 +70,48 @@ resources = [
 security_levels = ("Unrestricted", "Limited", "Sensitive", "Classified")
 blocked_users = {"temp_worker", "fired_employee", "compromised_acc"}
 
-def check_accesses():
-    pass
+
+def check_accesses(resources: tuple, users: dict) -> dict[str:dict]:
+    access_dict = {user: {} for user in users.keys()}
+    for user in users.keys():
+        if not user in users.keys():
+            access_dict[user].update(
+                {res: "DENY (User not found)" for res in resources}
+                )
+            continue
+        elif user in blocked_users:
+            access_dict[user].update(
+                {res: "DENY (User is blocked)" for res in resources}
+                )
+            continue
+        elif users[user]["active"] == False:
+            access_dict[user].update(
+                {res: "DENY (Account inactive)" for res in resources}
+                )
+            continue
+        for resource in resources:
+            if users[user]["clearance"] < resource[1]:
+                access_dict[user].update(
+                    {resource: "DENY (Insufficient clearance)"}
+                    )
+            else:
+                access_dict[user].update(
+                    {resource: "ALLOW"}
+                    )
+    return access_dict
+            
+
+
+def execute():
+    print("\nРесурси:")
+    print(*[f"{resource[0]}: {security_levels[resource[1]-1]}" for resource in resources], sep="\n", end="\n\n\n")
+
+    accesses_results = check_accesses(resources, users)
+    results = []
+
+    for user, val in accesses_results.items():
+        for res, access in val.items():
+            results.append(f"user={user}; resource={res[0]} -> {access}\n")
+        results.append("\n\n")
+
+    print(*results)

@@ -48,25 +48,181 @@
 # алгоритм хешування: sha1, мінімальна довжина пароля: 8    
 import os
 import sys
+import csv
+import json
+import hashlib
+from datetime import datetime
+from functools import wraps
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+from shared.student import VARIANT_NUMBER
+
+
+data_dir = "labs/lab1/data"
+password_min_length = 8
+salt = f"0000{VARIANT_NUMBER}"
+
+users_to_register = (
+    ("Ddimcho", "dumbpassword"),
+    ("Alina", "verysmartpassword"),
+    ("Andrii4", "sans_undertale"),
+    ("Andrii228", "dumbpassword"),
+    ("Ostap", "Ebatb47"),
+    ("Lazy_login", "lazypassword"),
+    ("BroTan", "Sans_OuterSwap"),
+    ("Lunekio", "Ki77yD1edY3ll0w"),
+    ("Dwoe4ka", "Dota2"),
+    ("Ddimcho2", "dumbpassword"),
+)
+
+
+   
     
 def generate_hash(password: str, salt: str="00000") -> str:
-    pass
+    if password is None or password == "":
+        raise ValueError("Password is empty")
+    if salt is None or salt == "":
+        raise ValueError("Salt is empty")
+    if len(password) < password_min_length:
+        raise ValidationError(f"Password should have at least {password_min_length} symbols.")
 
-def create_user(username, password):
-    pass
+    data = password + salt
+    hash_value = hashlib.sha1(data.encode("utf-8")).hexdigest()
 
-def create_users(users_list):
-    pass
+    return hash_value
+
+
+def create_user(username: str, password: str):
+    if not username:
+        raise ValueError("Empty login")
+    
+    hash_value = generate_hash(password, salt)
+    return username, hash_value
+    
+        
+
+def create_users(users_list:list[tuple]):
+    try:
+        with open(data_dir+"/users.csv", "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+
+            for username, password in users_list:
+                try:
+                    user = create_user(username, password)
+                    writer.writerow(user)
+
+                except (ValueError, ValidationError) as e:
+                    print(f"User Error '{username}': {e}")
+
+    except (FileNotFoundError, PermissionError, IOError) as e:
+        print(f"(handled at create_users) {type(e).__name__}: {e}")
+
+
+def read_user_csv():
+    users_db = []
+    try:
+        with open(data_dir+"/users.csv", "r", newline="", encoding="utf-8") as file:
+            reader = csv.reader(file)
+            for row in reader:
+                if len(row) == 2:
+                    username, password_hash = row
+                    users_db.append({
+                        "username": username,
+                        "hash": password_hash
+                        })
+    except (FileNotFoundError, PermissionError, IOError) as e:
+        print(f"(handled at read_user_csv) {type(e).__name__}: {e}")
+
+    return users_db
+        
+
+
+def write_login_attempt(event):
+    try:
+        logs = []
+        
+        if os.path.isfile(data_dir+"/log.json"):
+            try:
+                with open(data_dir+"/log.json", "r", encoding="utf-8") as file:
+                    logs = json.load(file)
+                    if not isinstance(logs, list):
+                        logs = []
+            except json.JSONDecodeError:
+                logs = []
+        logs.append(event)
+
+        with open(data_dir+"/log.json", "w", encoding="utf-8") as file:
+            json.dump(logs, file, ensure_ascii=False, indent=4)
+                
+        
+
+    except (FileNotFoundError, PermissionError, IOError) as e:
+        print(f"(handled at write_login_attempt) {type(e).__name__}: {e}")
 
 
 def log_event(function):
-    def record(user, pas):
-        pass
+    @wraps(function)
+    def record(*args, **kwargs):
+        username = ""
+
+        if len(args) > 0:
+            username = args[0]
+        elif "username" in kwargs:
+            username = kwargs["username"]
+
+        result = "failure"
+
+        try:
+            success = function(*args, **kwargs)
+
+            if success:
+                result = "success"
+
+            return success
+
+        except (ValueError, ValidationError):
+            # Помилка входу також вважається невдалою спробою
+            result = "failure"
+            raise
+
+        finally:
+            event = {
+                "event": "login",
+                "user": username,
+                "result": result,
+                "timestamp": datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+                "args": [],
+                "kwargs": {}
+            }
+
+            write_login_attempt(event)
+
+    return record
         
 
 @log_event
 def login(username: str, password: str) -> bool:
-    pass
+    if username is None or username == "":
+        raise ValueError("Username is empty")
+    if password is None or password == "":
+        raise ValueError("Password is empty")
+
+    try:
+        users_db = read_user_csv()
+
+        for user in users_db:
+            if user["username"] == username:
+                input_hash = generate_hash(password, salt)
+                if input_hash == user["hash"]:
+                    return True
+                return False
+        return False
+
+    except (FileNotFoundError, PermissionError, IOError, ValidationError, ValueError) as e:
+        print(f"(handled at login) {type(e).__name__}: {e}")
+        return False
 
 
 class ValidationError(Exception):
@@ -74,11 +230,53 @@ class ValidationError(Exception):
 
 
 
-try:
-    length = 9
-    if not length >= 8:
-        raise ValidationError("ValidationError: the password is too short")
-except FileNotFoundError, PermissionError, IOError, ValueError:
-    pass
-except ValidationError as e:
-    print(f"An error has occured: {e}")
+
+def execute():
+    os.makedirs(os.path.dirname("labs/lab1/data"), exist_ok=True)
+
+    
+    print("Creating users db...")
+    try:
+        create_users(users_to_register)
+        print("Users db created✅")
+
+    except (FileNotFoundError, PermissionError, IOError, ValidationError, ValueError) as e:
+        print(f"(handled at execute > creating users db) {type(e).__name__}: {e}")
+
+
+    print("Reading users db...")
+    try:
+        print("User db read succesfully✅")
+    except (FileNotFoundError, PermissionError, IOError, ValidationError, ValueError) as e:
+        print(f"(handled at execute > reading users db) {type(e).__name__}: {e}")
+
+
+    print("Logging in...")
+    
+    
+    print("Succesful try:")
+    try:
+        result = login("Ddimcho", "dumbpassword")
+        if result:
+            print("Ddimcho: Logged in succesfully")
+        else:
+            print("Ddimcho: Login failed")
+    except (ValueError, ValidationError) as e:
+        print(f"(handled at execute > reading users db) {type(e).__name__}: {e}")
+
+
+    print("Failed try:")
+    try:
+        result = login("Ddimcho2", "dumbpassword(not correct obviously)")
+        if result:
+            print("Ddimcho2: Logged in succesfully")
+        else:
+            print("Ddimcho2: Login failed")
+    except (ValueError, ValidationError) as e:
+        print(f"(handled at execute) {type(e).__name__}: {e}")
+
+
+    print("\n\n-----------------------------------------------------------\n")
+    print(f"Users table:\n{'№':<5}{'Логін':<20}{'SHA-1 хеш':<40}")
+    for number, user in enumerate(read_user_csv(), start=1):
+        print(f"{number:<5}{user['username']:<20}{user['hash']:<40}")
