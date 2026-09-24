@@ -51,7 +51,7 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -139,7 +139,6 @@ def read_user_csv():
 def write_login_attempt(event):
     try:
         logs = []
-        
         if os.path.isfile(data_dir+"/log.json"):
             try:
                 with open(data_dir+"/log.json", "r", encoding="utf-8") as file:
@@ -147,14 +146,13 @@ def write_login_attempt(event):
                     if not isinstance(logs, list):
                         logs = []
             except json.JSONDecodeError:
+                print("log.json couldn't be decoded correctly")
                 logs = []
+                
         logs.append(event)
-
         with open(data_dir+"/log.json", "w", encoding="utf-8") as file:
             json.dump(logs, file, ensure_ascii=False, indent=4)
-                
-        
-
+            
     except (OSError, FileNotFoundError, PermissionError) as e:
         print(f"(handled at write_login_attempt) {type(e).__name__}: {e}")
 
@@ -168,36 +166,28 @@ def log_event(function):
             username = args[0]
         elif "username" in kwargs:
             username = kwargs["username"]
-
+            
         result = "failure"
-
         try:
             success = function(*args, **kwargs)
-
             if success:
                 result = "success"
-
             return success
-
+        
         except (ValueError, ValidationError):
-            # Помилка входу також вважається невдалою спробою
             result = "failure"
-            raise
-
         finally:
             event = {
                 "event": "login",
                 "user": username,
                 "result": result,
-                "timestamp": datetime.now().strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                ),
+                "timestamp": datetime.now(tz=timezone)
+                .strftime("%Y-%m-%d %H:%M:%S"),
                 "args": [],
                 "kwargs": {}
-            }
-
+                }
             write_login_attempt(event)
-
+            
     return record
         
 
@@ -210,13 +200,10 @@ def login(username: str, password: str) -> bool:
 
     try:
         users_db = read_user_csv()
-
         for user in users_db:
             if user["username"] == username:
                 input_hash = generate_hash(password, salt)
-                if input_hash == user["hash"]:
-                    return True
-                return False
+                return input_hash == user["hash"]
         return False
 
     except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
