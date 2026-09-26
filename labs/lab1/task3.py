@@ -91,14 +91,15 @@ def generate_hash(password: str, salt: str="00000") -> str:
     return hash_value
 
 
+
 def create_user(username: str, password: str):
     if not username:
         raise ValueError("Empty login")
     
     hash_value = generate_hash(password, salt)
     return username, hash_value
-    
-        
+
+
 
 def create_users(users_list:list[tuple]):
     try:
@@ -113,8 +114,12 @@ def create_users(users_list:list[tuple]):
                 except (ValueError, ValidationError) as e:
                     print(f"User Error '{username}': {e}")
 
-    except (OSError, FileNotFoundError, PermissionError) as e:
-        print(f"(handled at create_users) {type(e).__name__}: {e}")
+    except FileNotFoundError as e:
+        handle_error("create_users", e)
+    except PermissionError as e:
+        handle_error("create_users", e)
+    except OSError as e:
+        handle_error("create_users", e)
 
 
 def read_user_csv():
@@ -129,8 +134,12 @@ def read_user_csv():
                         "username": username,
                         "hash": password_hash
                         })
-    except (OSError, FileNotFoundError, PermissionError) as e:
-        print(f"(handled at read_user_csv) {type(e).__name__}: {e}")
+    except FileNotFoundError as e:
+        handle_error("write_login_attempt", e)
+    except PermissionError as e:
+        handle_error("write_login_attempt", e)
+    except OSError as e:
+        handle_error("write_login_attempt", e)
 
     return users_db
         
@@ -153,8 +162,13 @@ def write_login_attempt(event):
         with open(data_dir+"/log.json", "w", encoding="utf-8") as file:
             json.dump(logs, file, ensure_ascii=False, indent=4)
             
-    except (OSError, FileNotFoundError, PermissionError) as e:
-        print(f"(handled at write_login_attempt) {type(e).__name__}: {e}")
+    except FileNotFoundError as e:
+        handle_error("write_login_attempt", e)
+    except PermissionError as e:
+        handle_error("write_login_attempt", e)
+    except OSError as e:
+        handle_error("write_login_attempt", e)
+
 
 
 def log_event(function):
@@ -176,12 +190,13 @@ def log_event(function):
         
         except (ValueError, ValidationError):
             result = "failure"
+            
         finally:
             event = {
                 "event": "login",
                 "user": username,
                 "result": result,
-                "timestamp": datetime.now(tz=timezone)
+                "timestamp": datetime.now()
                 .strftime("%Y-%m-%d %H:%M:%S"),
                 "args": [],
                 "kwargs": {}
@@ -189,7 +204,13 @@ def log_event(function):
             write_login_attempt(event)
             
     return record
-        
+
+
+     
+def handle_error(location:str, exception):
+    print(f"(handled at {location}) {type(exception).__name__}: {exception}")
+
+
 
 @log_event
 def login(username: str, password: str) -> bool:
@@ -206,14 +227,26 @@ def login(username: str, password: str) -> bool:
                 return input_hash == user["hash"]
         return False
 
-    except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
-        print(f"(handled at login) {type(e).__name__}: {e}")
+    except FileNotFoundError as e:
+        handle_error("login", e)
         return False
+    except PermissionError as e:
+        handle_error("login", e)
+        return False
+    except OSError as e:
+        handle_error("login", e)
+        return False
+    except ValueError as e:
+        handle_error("login", e)
+        return False
+    except ValidationError as e:
+        handle_error("login", e)
+        return False
+
 
 
 class ValidationError(Exception):
     pass
-
 
 
 
@@ -225,16 +258,32 @@ def execute():
     try:
         create_users(users_to_register)
         print("Users db created✅")
-
-    except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
-        print(f"(handled at execute > creating users db) {type(e).__name__}: {e}")
+    except FileNotFoundError as e:
+        handle_error("execute > reading users db", e)
+    except PermissionError as e:
+        handle_error("execute > reading users db", e)
+    except OSError as e:
+        handle_error("execute > reading users db", e)
+    except ValueError as e:
+        handle_error("execute > reading users db", e)
+    except ValidationError as e:
+        handle_error("execute > reading users db", e)
 
 
     print("Reading users db...")
     try:
+        read_user_csv()
         print("User db read succesfully✅")
-    except (OSError, FileNotFoundError, PermissionError, ValidationError, ValueError) as e:
-        print(f"(handled at execute > reading users db) {type(e).__name__}: {e}")
+    except FileNotFoundError as e:
+        handle_error("execute > reading users db", e)
+    except PermissionError as e:
+        handle_error("execute > reading users db", e)
+    except OSError as e:
+        handle_error("execute > reading users db", e)
+    except ValueError as e:
+        handle_error("execute > reading users db", e)
+    except ValidationError as e:
+        handle_error("execute > reading users db", e)
 
 
     print("Logging in...")
@@ -247,8 +296,10 @@ def execute():
             print("Ddimcho: Logged in succesfully")
         else:
             print("Ddimcho: Login failed")
-    except (ValueError, ValidationError) as e:
-        print(f"(handled at execute > reading users db) {type(e).__name__}: {e}")
+    except ValueError as e:
+        handle_error("execute > reading users db", e)
+    except ValidationError as e:
+        handle_error("execute > reading users db", e)
 
 
     print("Failed try:")
@@ -258,8 +309,10 @@ def execute():
             print("Ddimcho2: Logged in succesfully")
         else:
             print("Ddimcho2: Login failed")
-    except (ValueError, ValidationError) as e:
-        print(f"(handled at execute) {type(e).__name__}: {e}")
+    except ValueError as e:
+        handle_error("execute", e)
+    except ValidationError as e:
+        handle_error("execute", e)
 
 
     print("\n\n-----------------------------------------------------------\n")
