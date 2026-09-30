@@ -51,7 +51,7 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import wraps
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
@@ -192,11 +192,12 @@ def log_event(function):
             result = "failure"
             
         finally:
+            utc = datetime.now(UTC)
             event = {
                 "event": "login",
                 "user": username,
                 "result": result,
-                "timestamp": datetime.now()
+                "timestamp": datetime.now(utc.tzinfo)
                 .strftime("%Y-%m-%d %H:%M:%S"),
                 "args": [],
                 "kwargs": {}
