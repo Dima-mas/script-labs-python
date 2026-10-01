@@ -102,6 +102,7 @@ def create_user(username: str, password: str):
 
 
 def create_users(users_list:list[tuple]):
+    location = "create_users"
     try:
         with open(data_dir+"/users.csv", "w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
@@ -115,14 +116,15 @@ def create_users(users_list:list[tuple]):
                     print(f"User Error '{username}': {e}")
 
     except FileNotFoundError as e:
-        handle_error("create_users", e)
+        handle_error(location, e)
     except PermissionError as e:
-        handle_error("create_users", e)
+        handle_error(location, e)
     except OSError as e:
-        handle_error("create_users", e)
+        handle_error(location, e)
 
 
 def read_user_csv():
+    location = "read_user_csv"
     users_db = []
     try:
         with open(data_dir+"/users.csv", "r", newline="", encoding="utf-8") as file:
@@ -135,17 +137,18 @@ def read_user_csv():
                         "hash": password_hash
                         })
     except FileNotFoundError as e:
-        handle_error("write_login_attempt", e)
+        handle_error(location, e)
     except PermissionError as e:
-        handle_error("write_login_attempt", e)
+        handle_error(location, e)
     except OSError as e:
-        handle_error("write_login_attempt", e)
+        handle_error(location, e)
 
     return users_db
         
 
 
 def write_login_attempt(event):
+    location = "write_login_attempt"
     try:
         logs = []
         if os.path.isfile(data_dir+"/log.json"):
@@ -163,11 +166,11 @@ def write_login_attempt(event):
             json.dump(logs, file, ensure_ascii=False, indent=4)
             
     except FileNotFoundError as e:
-        handle_error("write_login_attempt", e)
+        handle_error(location, e)
     except PermissionError as e:
-        handle_error("write_login_attempt", e)
+        handle_error(location, e)
     except OSError as e:
-        handle_error("write_login_attempt", e)
+        handle_error(location, e)
 
 
 
@@ -209,12 +212,14 @@ def log_event(function):
 
      
 def handle_error(location:str, exception):
-    print(f"(handled at {location}) {type(exception).__name__}: {exception}")
+    print(f"(handled at {location}) {type(exception).__name__}")
 
 
 
 @log_event
 def login(username: str, password: str) -> bool:
+    location = "login"
+    
     if username is None or username == "":
         raise ValueError("Username is empty")
     if password is None or password == "":
@@ -229,19 +234,19 @@ def login(username: str, password: str) -> bool:
         return False
 
     except FileNotFoundError as e:
-        handle_error("login", e)
+        handle_error(location, e)
         return False
     except PermissionError as e:
-        handle_error("login", e)
+        handle_error(location, e)
         return False
     except OSError as e:
-        handle_error("login", e)
+        handle_error(location, e)
         return False
     except ValueError as e:
-        handle_error("login", e)
+        handle_error(location, e)
         return False
     except ValidationError as e:
-        handle_error("login", e)
+        handle_error(location, e)
         return False
 
 
@@ -254,69 +259,38 @@ class ValidationError(Exception):
 def execute():
     os.makedirs(os.path.dirname("labs/lab1/data"), exist_ok=True)
 
-    
-    print("Creating users db...")
     try:
+        print("Creating users db...")
         create_users(users_to_register)
         print("Users db created✅")
-    except FileNotFoundError as e:
-        handle_error("execute > reading users db", e)
-    except PermissionError as e:
-        handle_error("execute > reading users db", e)
-    except OSError as e:
-        handle_error("execute > reading users db", e)
-    except ValueError as e:
-        handle_error("execute > reading users db", e)
-    except ValidationError as e:
-        handle_error("execute > reading users db", e)
 
 
-    print("Reading users db...")
-    try:
+        print("Reading users db...")
         read_user_csv()
         print("User db read succesfully✅")
-    except FileNotFoundError as e:
-        handle_error("execute > reading users db", e)
-    except PermissionError as e:
-        handle_error("execute > reading users db", e)
-    except OSError as e:
-        handle_error("execute > reading users db", e)
-    except ValueError as e:
-        handle_error("execute > reading users db", e)
-    except ValidationError as e:
-        handle_error("execute > reading users db", e)
 
 
-    print("Logging in...")
-    
-    
-    print("Succesful try:")
-    try:
+        print("Logging in...")
+        
+        print("Succesful try:")
         result = login("Ddimcho", "dumbpassword")
         if result:
             print("Ddimcho: Logged in succesfully")
         else:
             print("Ddimcho: Login failed")
-    except ValueError as e:
-        handle_error("execute > reading users db", e)
-    except ValidationError as e:
-        handle_error("execute > reading users db", e)
-
-
-    print("Failed try:")
-    try:
+            
+        print("Failed try:")
         result = login("Ddimcho2", "dumbpassword(not correct obviously)")
         if result:
             print("Ddimcho2: Logged in succesfully")
         else:
             print("Ddimcho2: Login failed")
+            
+        print("\n\n-----------------------------------------------------------\n")
+        print(f"Users table:\n{'№':<5}{'Логін':<20}{'SHA-1 хеш':<40}")
+        for number, user in enumerate(read_user_csv(), start=1):
+            print(f"{number:<5}{user['username']:<20}{user['hash']:<40}")
     except ValueError as e:
         handle_error("execute", e)
     except ValidationError as e:
         handle_error("execute", e)
-
-
-    print("\n\n-----------------------------------------------------------\n")
-    print(f"Users table:\n{'№':<5}{'Логін':<20}{'SHA-1 хеш':<40}")
-    for number, user in enumerate(read_user_csv(), start=1):
-        print(f"{number:<5}{user['username']:<20}{user['hash']:<40}")

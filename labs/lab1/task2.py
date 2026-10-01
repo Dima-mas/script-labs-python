@@ -22,7 +22,6 @@
     4. Виведіть результати перевірки на екран у форматі: user=[ім'я_користувача]
         resource=[назва_ресурсу] -> ALLOW / DENY ([причина_відмови])"""
 
-
 users = {
     "security_chief": {
         "role": "security_officer",
@@ -77,34 +76,36 @@ def check_accesses(resources: tuple, users: dict) -> dict[str:dict]:
         if not user in users:
             access_dict[user].update(
                 {res: "DENY (User not found)" for res in resources}
-                )
+            )
             continue
         elif user in blocked_users:
             access_dict[user].update(
                 {res: "DENY (User is blocked)" for res in resources}
-                )
+            )
             continue
         elif users[user]["active"] == False:
             access_dict[user].update(
                 {res: "DENY (Account inactive)" for res in resources}
-                )
+            )
             continue
         for resource in resources:
             if users[user]["clearance"] < resource[1]:
-                access_dict[user].update(
-                    {resource: "DENY (Insufficient clearance)"}
-                    )
+                access_dict[user].update({resource: "DENY (Insufficient clearance)"})
             else:
-                access_dict[user].update(
-                    {resource: "ALLOW"}
-                    )
+                access_dict[user].update({resource: "ALLOW"})
     return access_dict
-            
 
 
 def execute():
     print("\nРесурси:")
-    print(*[f"{resource[0]}: {security_levels[resource[1]-1]}" for resource in resources], sep="\n", end="\n\n\n")
+    print(
+        *[
+            f"{resource[0]}: {security_levels[resource[1] - 1]}"
+            for resource in resources
+        ],
+        sep="\n",
+        end="\n\n\n",
+    )
 
     accesses_results = check_accesses(resources, users)
     results = []
